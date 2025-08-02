@@ -1,0 +1,78 @@
+PCA - Dimenstionality reduction
+XG-boost to perform classification task
+
+1. Project Overview:
+
+The aim of the Classification project is to detect the presence or absence of cardiovascular disease in person based on given features.
+
+Age
+Height
+Gender
+Smoking
+Alcohol intake
+Physical activity
+systolic blood pressure
+Diastolic blood pressure
+Cholesterol
+Glucose
+
+
+conda create -n cardio_vascular_aws_sm python==3.10 
+conda activate cardio_vascular_aws_sm
+
+2. PCA:
+It is a unsupervised ML algorithm that performs Dimenstionality reduction while attempting at keeping the original information unchanged.
+PCA works by trying to find new set of features called "components".
+
+In Amazon SM PCA operates in two modes:
+
+Regular: Works well with sparse data small manageable number of observations/features.
+Randomized: Works well with large number of observations/features.
+
+Hyperparameters of PCA:
+
+feature_dim --> Input dimension.
+mini_batch_size --> Number of rows in a mini-batch.
+num_components --> The number of principal components to compute.
+algorithm_mode --> Mode for computing the principal components.(regular or randomized)
+extra_components --> As the value increases, the solution becomes more accurate but the runtime and memory consumption increase linearly. The default, -1, means the maximum of 10 and num_components. Valid for randomized mode only.
+
+PCA can be used both in FIle mode and Pipe Mode.
+
+3. XGBOOST ALgorithm (Classification)
+
+The algorithm work by combining an ensemble of prediction from several weak model.
+
+
+Hyperparameters of XGBOOST:
+
+
+
+4. Confusion Matrix
+
+TP: 
+TN:
+FP(Type 1 error):
+FN(Type 2 Error):
+
+Classification Accuracy:(TP+TN)/(TP+TN+FP+FN)
+Misclassification Rate:(FP+FN)/(TP+TN+FP+FN)
+
+5. Precision Recall F1 score
+
+Precision: TP/TP+FP
+Recall:TP/TP+FN
+
+6. AUC-ROC Metrics
+
+-   ROC curve is a metric that access the model ability to distinguish the model ability to distinguish between binary classification
+-   Plotting TPR vs FPR
+
+TPR --> sentitivity or Recall
+FPR --> Probability pf false Alarm
+
+7. Overfitting and underfitting
+
+
+
+8. Sagemaker Notebook Setup and EDA:
