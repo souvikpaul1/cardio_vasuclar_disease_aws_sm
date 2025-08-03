@@ -1,20 +1,23 @@
 PCA - Dimenstionality reduction
 XG-boost to perform classification task
 
+Dataset link:
+https://www.kaggle.com/datasets/sulianova/cardiovascular-disease-dataset
+
 1. Project Overview:
 
-The aim of the Classification project is to detect the presence or absence of cardiovascular disease in person based on given features.
+The aim of the Classification project is to detect the presence or absence of cardiovascular disease in person based on given features and host it as a endpoint in AWS Sagemaker.
 
-Age
-Height
-Gender
-Smoking
-Alcohol intake
-Physical activity
-systolic blood pressure
-Diastolic blood pressure
-Cholesterol
-Glucose
+1.Age
+2.Height
+3.Gender
+4.Smoking
+5.Alcohol intake
+6.Physical activity
+7.systolic blood pressure
+8.Diastolic blood pressure
+9.Cholesterol
+10.Glucose
 
 
 conda create -n cardio_vascular_aws_sm python==3.10 
@@ -76,3 +79,190 @@ FPR --> Probability pf false Alarm
 
 
 8. Sagemaker Notebook Setup and EDA:
+
+------------------------------------------------
+
+Task 1: Load the Dataset
+Task 2: Perform EDA on the Dataset
+        - Drop ID column
+        - convert age from days  to years
+        - Remove outliers
+
+Task 3:
+        - visualize the dataset
+
+Task 4:
+        - Do a train test split
+
+Task 5: Train on XGboost in local mode and check the accuracy:
+        # Trial 1: XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+        Accuracy: 0.74
+
+        Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.72      0.77      0.75      6988
+           1       0.76      0.70      0.73      7012
+
+    accuracy                           0.74     14000
+   macro avg       0.74      0.74      0.74     14000
+weighted avg       0.74      0.74      0.74     14000
+
+# Confusion Matrix
+import seaborn as sns
+import matplotlib.pyplot as plt 
+conf_matrix = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['No Disease', 'Disease'], yticklabels=['No Disease', 'Disease'])
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+# Trial 2:
+XGBClassifier(learning_rate=0.1,n_estimators=500,max_depth=20)
+    Accuracy: 0.70
+
+
+# Trial 3: Hyperparameters tuning on XGBoost:
+
+#hyperparameter tuning
+from sklearn.model_selection import GridSearchCV
+param_grid = {
+    'n_estimators': [100, 200,500],
+    'max_depth': [3, 5, 7],
+    'learning_rate': [0.01, 0.1, 0.2],
+    'gamma': [0, 0.1, 0.2],
+    'subsample': [0.8, 1.0],
+    'colsample_bytree': [0.8, 1.0]
+}
+
+xgb_model = XGBClassifier(objective='binary:logistic')
+grid_search = GridSearchCV(estimator=xgb_model, param_grid=param_grid, scoring='accuracy', cv=3, verbose=4, n_jobs=1)
+grid_search.fit(X_train, y_train)
+print("Best parameters found: ", grid_search.best_params_)
+
+Best Model Accuracy: 0.74
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.72      0.78      0.75      6988
+           1       0.76      0.70      0.73      7012
+
+    accuracy                           0.74     14000
+   macro avg       0.74      0.74      0.74     14000
+weighted avg       0.74      0.74      0.74     14000
+
+precision_score = 0.7623255813953488
+recall_score = 0.7012264689104393
+f1_score = 0.7305006685485069
+
+Task 6: Perform Dimensionality reduction using PCA (Using Sagemaker)
+
+Create an IAM user and give it necessary role and policy to access S3 and AWS Sagemaker
+
+bucket='cardio-vascular-classification'
+prefix = 'cardio_vasuclar_disease_aws_sm'
+
+# code below converts the pandas dataframe to a numpy array and then to a dense tensor
+# this is required for the PCA model to work in SageMaker
+
+Upload the file to S3:
+
+Uploaded data to s3://cardio-vascular-classification/cardio_vasuclar_disease_aws_sm\train\pca
+
+Download the PCA container, with the sagemaker estimator pass this 
+
+pca = sagemaker.estimator.Estimator(container,
+                                    role,
+                                    instance_count=1,
+                                    instance_type='ml.c4.xlarge',
+                                    output_path=output_location,
+                                    sagemaker_session=sagemaker_session)
+
+pca.set_hyperparameters(feature_dim=11, num_components=6,subtract_mean=False, mini_batch_size=100)
+
+# mention how many PCA component is required from original 11.
+
+
+# pass in the training data from s3 to train the pca model
+s3_train_data = 's3://cardio-vascular-classification/cardio_vasuclar_disease_aws_sm/train/pca'
+
+pca.fit({'train': s3_train_data})  
+
+This training happens on AWS SM and this is chargable.
+
+Task 7:
+# Deploy the PCA model to an endpoint
+pca_reduction = pca.deploy(initial_instance_count=1, instance_type='ml.m4.xlarge')
+
+Make predictions using the PCA model on the test data
+Delete the endpoints
+
+Task 8:
+Train and evaluate XGBoost Model using PCA transformed data using Sagemaker
+
+Create train, test and validation dataset
+
+Save train and valid and push to S3 output_location
+
+Download the XGboost container
+
+xgb = Estimator(container,
+                role,
+                instance_count=1,
+                instance_type='ml.m4.xlarge',
+                output_path=output_location,
+                sagemaker_session=sagemaker_session)
+
+xgb.set_hyperparameters(max_depth=3,
+                        objective='multi:softmax',
+                        num_class=2,
+                        eta=0.1,
+                        num_round=100,
+                        )
+
+train_input=sagemaker.session.s3_input(s3_train_data, content_type='text/csv', s3_data_type='S3Prefix')
+validation_input=sagemaker.session.s3_input(s3_valid_data, content_type='text/csv', s3_data_type='S3Prefix')
+
+
+xgb.fit({'train': train_input, 'validation': validation_input}
+
+Task 9:
+Deploy and test the trained XGBOOST Model
+Xgboost_classifier=xgb.deploy(initial_instance_count=1, instance_type='ml.m4.xlarge')
+
+make Prediction on the test dataset:
+
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.74      0.79      0.76      1839
+           1       0.75      0.69      0.72      1661
+
+    accuracy                           0.74      3500
+   macro avg       0.74      0.74      0.74      3500
+weighted avg       0.74      0.74      0.74      3500
+
+precision_score = 0.7457846952010376
+recall_score = 0.6923540036122817
+f1_score = 0.7180768029971901
+
+# Confusion Matrix
+import seaborn as sns
+import matplotlib.pyplot as plt 
+conf_matrix = confusion_matrix(y_test, predicted_values)
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['No Disease', 'Disease'], yticklabels=['No Disease', 'Disease'])
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+Delete the endpoint
+
+
+
+
