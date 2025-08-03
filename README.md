@@ -1,7 +1,3 @@
-# cardio_vasuclar_disease_aws_sm
-Predict CardioVascular Disease using PCA and XGBoost alogorithm and deploy to AWS SM
-
-
 # Cardiovascular Disease Classification Using PCA and XGBoost on AWS SageMaker
 
 ## Project Overview
@@ -148,7 +144,7 @@ xgb.fit({'train': train_input, 'validation': validation_input})
   ```python
   xgb_endpoint = xgb.deploy(initial_instance_count=1, instance_type='ml.m4.xlarge')
   ```
-
+- **Accuracy**: Typically ~0.74 depending on split/hyperparameters.
 - Predict on test set and calculate:
   - Confusion Matrix
   - Precision, Recall, F1 Score, ROC/AUC
@@ -167,38 +163,7 @@ xgb.fit({'train': train_input, 'validation': validation_input})
   sagemaker.Session().delete_endpoint(xgb_endpoint)
   ```
 
-## Interview Explanation Script
 
-- **Explain Pipeline:** 
-  - Data preprocessing (EDA, feature engineering, outlier removal)
-  - Use PCA for reducing dimensions, simplifying the learning problem.
-  - Train XGBoost on both raw and PCA-transformed data for comparison.
-- **Highlight SageMaker Benefits:** 
-  - Fully managed, scalable ML training and deployment service.
-  - Saves time, enables easy endpoint deployment for Realtime inference.
-- **Emphasize Metrics Used:** 
-  - Focus on why accuracy, precision, recall, and ROC/AUC are important in clinical/binomial classification tasks.
-- **Discuss Robustness:** 
-  - Cross-validation, hyperparameter tuning increase reliability.
-- **Deployment:** 
-  - End-to-end cloud workflow: from EDA on notebook to real-time endpoint in production.
-
-## Project Structure Example
-
-```
-|-- data/
-    |-- raw/
-    |-- processed/
-|-- notebooks/
-    |-- 01-eda.ipynb
-    |-- 02-pca.ipynb
-    |-- 03-xgboost.ipynb
-    |-- 04-deployment.ipynb
-|-- sagemaker/
-    |-- train_pca.py
-    |-- train_xgb.py
-|-- README.md
-```
 
 ## Useful References
 
